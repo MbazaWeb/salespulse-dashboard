@@ -486,3 +486,141 @@ details.tie td, details.tie th { padding: 8px 10px; border-bottom: 1px solid var
 @media (max-width: 860px) {
   .menu-btn.icon-btn[data-testid="nav-toggle-mobile"] { display: grid; }
 }
+
+/* Daily and weekly history */
+.sales-controls { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:16px 0; }
+.sales-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.sales-summary .panel { padding:18px; }
+.sales-summary small { display:block; color:var(--muted, #777); margin-bottom:9px; }
+.sales-summary h2 { font-size:26px; margin:0; }
+.sales-history-scroll { overflow-x:auto; max-width:100%; }
+.sales-history-table { min-width:960px; white-space:nowrap; border-collapse:separate; border-spacing:0; }
+.sales-history-table th, .sales-history-table td { min-width:63px; }
+.sales-history-table .sales-sticky { position:sticky; left:0; z-index:2; min-width:135px; background:var(--surface, #fff); box-shadow:2px 0 3px rgba(0,0,0,.05); }
+.sales-history-table thead .sales-sticky { z-index:3; }
+.sales-history-table .sales-sub { display:block; font-size:11px; opacity:.65; }
+.sales-history-table .sales-hit { background:rgba(22,163,74,.12); font-weight:700; }
+@media(max-width:860px){ .sales-summary{grid-template-columns:repeat(2,minmax(0,1fr));} .sales-controls .seg{max-width:100%;overflow-x:auto;} }
+@media(max-width:480px){ .sales-summary h2{font-size:21px;} .sales-controls{align-items:stretch;} }
+
+/* SalesPulse mobile-first override — append to src/styles.css */
+@media (max-width: 860px) {
+  html, body, #root { width: 100%; max-width: 100%; }
+  body { overflow-x: clip; }
+  .app, .main, .content, .page, .panel, .topbar, .hero, .filters { min-width: 0; max-width: 100%; }
+  .topbar { gap: 8px; padding: 10px 12px; }
+  .top-left { min-width: 0; flex: 1 1 auto; gap: 8px; }
+  .crumb { min-width: 0; font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
+  .topbar .live { min-width: 0; flex: 0 1 auto; max-width: 46%; padding: 7px 9px; font-size: 11px; line-height: 1.2; border-radius: 14px; overflow-wrap: anywhere; }
+  .topbar .live .dot { flex: 0 0 7px; }
+  .content { padding: 18px 12px 30px; }
+  .hero { align-items: flex-start; gap: 12px; }
+  .hero h1 { font-size: clamp(26px, 7vw, 34px); line-height: 1.08; overflow-wrap: anywhere; }
+  .hero .actions { width: 100%; }
+  .hero .actions .btn { flex: 1 1 0; justify-content: center; min-width: 0; }
+  .filters { width: 100%; gap: 10px; }
+  .filters > .seg { display: flex; width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .filters > .seg::-webkit-scrollbar { display: none; }
+  .filters > .seg button { flex: 0 0 auto; }
+  .search { width: 100%; min-width: 0; }
+  .search input { min-width: 0; }
+  .panel { padding: 16px; }
+  .grid-2, .regions-grid { grid-template-columns: minmax(0, 1fr); }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .kpi { min-width: 0; padding: 14px; }
+  .kpi-val { font-size: clamp(24px, 6.5vw, 32px); overflow-wrap: anywhere; }
+  .kpi-ring { position: relative; display: block; min-height: 142px; overflow: hidden; }
+  .kpi-ring > .ring { position: absolute; right: 7px; bottom: 8px; transform: scale(.68); transform-origin: right bottom; }
+  .kpi-ring > div:first-child { position: relative; z-index: 1; max-width: 100%; }
+  .kpi-ring .kpi-note { max-width: 75%; overflow-wrap: anywhere; }
+  .panel-head { min-width: 0; }
+  .panel-head h2 { overflow-wrap: anywhere; }
+  .rc-main { flex-wrap: wrap; }
+  .rc-stats { min-width: min(100%, 220px); }
+  .tele-stats { min-width: 0; width: 100%; }
+  .tele-stats h2 { font-size: 27px; }
+  .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mini-grid div, .changes div { min-width: 0; overflow-wrap: anywhere; }
+  .drawer { width: 100%; max-width: 100vw; padding: 18px; }
+  .table-wrap { margin: 0; padding: 0; max-width: 100%; overflow: visible; }
+  /* Table-to-card transformation: no sideways scrolling on mobile. */
+  .table-wrap table, .table-wrap thead, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; min-width: 0; }
+  .table-wrap thead { display: none; }
+  .table-wrap tbody { display: grid; gap: 10px; }
+  .table-wrap tbody tr { border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 10px 12px; box-shadow: var(--shadow); }
+  .table-wrap tbody td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-2); white-space: normal; overflow-wrap: anywhere; text-align: right; }
+  .table-wrap tbody td:last-child { border-bottom: 0; }
+  .table-wrap tbody td::before { content: attr(data-label); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; flex: 0 0 38%; text-align: left; }
+  .table-wrap tbody td:first-child { font-weight: 700; font-size: 15px; }
+  .table-wrap tbody td .ach { min-width: 0; flex: 1; justify-content: flex-end; }
+  .table-wrap tbody td .ach .bar { max-width: 90px; min-width: 24px; }
+  .table-wrap tfoot { display: block; margin-top: 12px; }
+  .table-wrap tfoot tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .table-wrap tfoot td { display: block; white-space: normal; padding: 10px; border-radius: 10px; background: var(--paper); text-align: left; }
+  .table-wrap tfoot td::before { content: attr(data-label) ': '; font-weight: 500; color: var(--muted); }
+  .table-wrap tfoot td:empty { display: none; }
+  .table-wrap tbody tr:hover { background: var(--card); }
+  .report .actions { width: 100%; }
+  .report .actions .btn { flex: 1 1 auto; justify-content: center; }
+}
+@media (max-width: 390px) {
+  .topbar .live { max-width: 42%; font-size: 10px; }
+  .kpi { padding: 12px; }
+  .kpi-ring > .ring { transform: scale(.58); }
+  .kpi-ring .kpi-note { max-width: 85%; }
+  .panel { padding: 13px; }
+  .rc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* SalesPulse history week selector — scoped to daily/weekly page */
+.sales-week-picker { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 18px; }
+.sales-week-picker button { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:9px 15px; font-weight:650; text-align:left; min-width:105px; }
+.sales-week-picker button small { display:block; font-size:11px; font-weight:400; color:var(--muted); }
+.sales-week-picker button[aria-pressed="true"] { background:var(--ink); border-color:var(--ink); color:white; }
+.sales-week-picker button[aria-pressed="true"] small { color:#ddd; }
+@media(max-width:860px) {
+  .sales-week-picker { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .sales-week-picker button { min-width:0; }
+  .sales-daily-table { overflow:visible !important; max-width:100%; }
+  .sales-daily-table .sales-history-table { min-width:0 !important; width:100%; white-space:normal; }
+  .sales-daily-table .sales-history-table tbody td { white-space:normal; }
+  .sales-daily-table .sales-history-table tbody td:not(:first-child)::before { content:attr(data-day); }
+  .sales-daily-table .sales-history-table tbody td:first-child { display:block; text-align:left; }
+  .sales-daily-table .sales-history-table .sales-sticky { position:static; min-width:0; box-shadow:none; }
+  .sales-daily-table .sales-history-table tfoot { display:none; }
+}
+
+/* SalesPulse drilldown: click-through details, phone-first */
+.sales-select-row { cursor:pointer; }
+.sales-select-row:focus-visible { outline:2px solid var(--accent);outline-offset:-2px; }
+.sales-drilldown { scroll-margin-top:90px; }
+.sales-detail-kpis { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0 24px; }
+.sales-detail-kpis>div,.sales-insights>div { min-width:0;background:var(--paper);border-radius:12px;padding:14px; }
+.sales-detail-kpis small,.sales-insights small { display:block;color:var(--muted);font-size:12px; }
+.sales-detail-kpis strong { display:block;font-size:24px;margin-top:6px;overflow-wrap:anywhere; }
+.sales-detail-columns { display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:24px; }
+.sales-detail-columns>div { min-width:0; }
+.sales-detail-columns h3 { margin:12px 0;font-size:16px; }
+.sales-trend { height:190px;display:grid;grid-template-columns:repeat(26,minmax(0,1fr));align-items:end;gap:3px;border-bottom:1px solid var(--line);padding:12px 0 0; }
+.sales-trend-col { height:100%;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px; }
+.sales-trend-bar { width:100%;min-height:2px;border-radius:3px 3px 0 0; }
+.sales-trend-col small { font-size:9px;color:var(--muted); }
+.sales-week-detail { display:grid;gap:12px; }
+.sales-week-detail-row { display:grid;grid-template-columns:90px minmax(0,1fr) 105px 42px;align-items:center;gap:10px; }
+.sales-week-detail-row small { color:var(--muted);font-size:11px; }
+.sales-week-detail-row>div:first-child small { display:block; }
+.sales-week-detail-row b { text-align:right;font-size:12px; }
+.sales-week-track { height:9px;background:var(--line-2);border-radius:9px;overflow:hidden; }
+.sales-week-track span { display:block;height:100%;border-radius:9px; }
+.sales-insights { display:grid;align-content:start;gap:10px; }
+.sales-insights strong { display:block;font-size:17px;margin-top:3px;overflow-wrap:anywhere; }
+@media(max-width:860px) {
+ .sales-detail-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .sales-detail-columns { grid-template-columns:minmax(0,1fr); }
+ .sales-week-detail-row { grid-template-columns:70px minmax(0,1fr) 82px 35px;gap:6px; }
+ .sales-week-detail-row b { font-size:11px; }
+}
+@media(max-width:400px) {
+ .sales-detail-kpis strong { font-size:20px; }
+ .sales-trend { gap:2px; }
+ .sales-trend-col small { font-size:8px; }
+}

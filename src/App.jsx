@@ -3,6 +3,7 @@ import { BUILTIN_DATASET, loadDataset, saveDataset, clearDataset } from './data.
 import { aggregate, groupBy, sortRows, toCSV, download, fmt, signedGap, statusOf, toneVar } from './utils.js';
 import { Icon, Kpi, Ring, Bar, Pill, SortTh, SkeletonKpis, SkeletonPanel, Drawer } from './components.jsx';
 import ImportPanel from './ImportPanel.jsx';
+import { SNAPSHOT_DATES, REGION_DAILY, TERRITORY_DAILY, WEEK_GROUPS, sumSales } from './dailySnapshot.js';
 
 const PAGES = [
   { id: 'overview', label: 'Overview', icon: 'grid', title: 'Performance overview' },
@@ -10,6 +11,7 @@ const PAGES = [
   { id: 'territories', label: 'Territories', icon: 'list', title: 'Territory ledger' },
   { id: 'team', label: 'Team', icon: 'users', title: 'Managers & rollups' },
   { id: 'telesales', label: 'Telesales', icon: 'phone', title: 'Telesales desk' },
+  { id: 'daily-weekly', label: 'Daily & Weekly Sales', icon: 'trend', title: 'Daily & weekly sales' },
   { id: 'reports', label: 'Reports', icon: 'file', title: 'Reports & tie-out' },
   { id: 'settings', label: 'Settings', icon: 'sliders', title: 'Settings' },
 ];
@@ -71,7 +73,7 @@ function TerritoryTable({ rows, cols, sort, onSort, onOpen, threshold, totals })
           {rows.map((r) => (
             <tr key={r.id} tabIndex={0} onClick={() => onOpen(r)} onKeyDown={(e) => e.key === 'Enter' && onOpen(r)}>
               {cols.map((c) => (
-                <td key={c.k} className={c.num ? 'num' : ''}><Cell r={r} k={c.k} threshold={threshold} /></td>
+                <td key={c.k} data-label={c.label} className={c.num ? 'num' : ''}><Cell r={r} k={c.k} threshold={threshold} /></td>
               ))}
             </tr>
           ))}
@@ -87,7 +89,7 @@ function TerritoryTable({ rows, cols, sort, onSort, onOpen, threshold, totals })
                   actual: fmt(t.actual), pct: `${t.pct}%`, gap: signedGap(t.gap),
                   mtgGap: fmt(t.mtgGap), newRR: fmt(t.newRR),
                 }[c.k] ?? '';
-                return <td key={c.k} className={c.num ? 'num' : ''}>{v}</td>;
+                return <td key={c.k} data-label={c.label} className={c.num ? 'num' : ''}>{v}</td>;
               })}
             </tr>
           </tfoot>
@@ -111,14 +113,14 @@ function GroupTable({ groups, threshold }) {
         <tbody>
           {groups.map((g) => (
             <tr key={g.name}>
-              <td><strong>{g.name}</strong></td>
-              <td className="num">{g.count}</td>
-              <td className="num">{fmt(g.mtdRR)}</td>
-              <td className="num">{fmt(g.mtdTarget)}</td>
-              <td className="num strong">{fmt(g.actual)}</td>
-              <td><Ach pct={g.pct} threshold={threshold} /></td>
-              <td className={`num ${g.gap < 0 ? 'neg' : 'pos'}`}>{signedGap(g.gap)}</td>
-              <td className="num">{fmt(g.mtgGap)}</td>
+              <td data-label="Name"><strong>{g.name}</strong></td>
+              <td data-label="Territories" className="num">{g.count}</td>
+              <td data-label="Territories" className="num">{fmt(g.mtdRR)}</td>
+              <td data-label="Territories" className="num">{fmt(g.mtdTarget)}</td>
+              <td data-label="Territories" className="num strong">{fmt(g.actual)}</td>
+              <td data-label="Territories"><Ach pct={g.pct} threshold={threshold} /></td>
+              <td data-label="Territories" className={`num ${g.gap < 0 ? 'neg' : 'pos'}`}>{signedGap(g.gap)}</td>
+              <td data-label="Territories" className="num">{fmt(g.mtgGap)}</td>
             </tr>
           ))}
         </tbody>
@@ -212,6 +214,10 @@ function PageSkeleton({ page }) {
 export default function App() {
   const [dataset, setDataset] = useState(loadDataset);
   const [page, setPage] = useState('overview');
+  const [salesPeriod, setSalesPeriod] = useState('daily');
+  const [salesGrouping, setSalesGrouping] = useState('territory');
+  const [salesDrilldown, setSalesDrilldown] = useState(null);
+  const [salesWeek, setSalesWeek] = useState(3);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
   const [region, setRegion] = useState('All');
@@ -473,6 +479,127 @@ export default function App() {
     );
   };
 
+  const dailyWeekly = () => {
+    const selectedSales = salesDrilldown;
+    const setSelectedSales = setSalesDrilldown;
+    const regionNames = ['Coastal', 'Lake', 'Northern', 'Central', 'Southern'];
+    const records = salesGrouping === 'region'
+      ? regionNames.map(name => ({ name, values: REGION_DAILY[name], target: ALL.filter(r => r.region === name).reduce((a,r)=>a+r.rr,0) }))
+      : ALL.map(r => ({ name: r.territory, sub: r.tsm, values: TERRITORY_DAILY[r.territory] ?? [], target: r.rr }));
+    const columns = salesPeriod === 'daily'
+      ? SNAPSHOT_DATES.map((date, i) => ({ label: `${i+1} Oct`, start:i, end:i })).filter((_, i) => salesWeek === -1 || (i >= WEEK_GROUPS[salesWeek].start && i <= WEEK_GROUPS[salesWeek].end))
+      : WEEK_GROUPS;
+    const fieldTotal = sumSales(regionNames.flatMap(name => REGION_DAILY[name]));
+    const weeklyTotals = WEEK_GROUPS.map(w => sumSales(regionNames.flatMap(name => REGION_DAILY[name].slice(w.start,w.end+1))));
+    const total = fieldTotal;
+    const avg = Math.round(total / SNAPSHOT_DATES.length);
+    const best = Math.max(...SNAPSHOT_DATES.map((_,i)=>sumSales(regionNames.map(name=>REGION_DAILY[name][i]))));
+    const exportHistory = () => {
+      const headers = ['Name', 'RR', ...columns.map(c=>c.label), 'Total'];
+      const lines = records.map(r=>[r.name,r.target,...columns.map(c=>sumSales(r.values.slice(c.start,c.end+1))),sumSales(r.values)]);
+      const csv = [headers,...lines].map(row=>row.map(value=>`"${String(value).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+      download(`salespulse-${salesPeriod}-${salesGrouping}-oct2026.csv`, '\ufeff'+csv);
+    };
+    return <>
+      <section className="panel" data-testid="daily-weekly-panel">
+        <div className="panel-head"><div><h2>Daily & Weekly Sales</h2><p>October 2026 · historical snapshot, 1–26 October · excludes Telesales from field totals</p></div><span className="tag">Snapshot · 26 Oct 2026</span></div>
+        <div className="sales-controls">
+          <div className="seg" role="group" aria-label="Sales period">
+            <button data-testid="sales-daily" aria-pressed={salesPeriod==='daily'} onClick={()=>setSalesPeriod('daily')}>Daily Sales</button>
+            <button data-testid="sales-weekly" aria-pressed={salesPeriod==='weekly'} onClick={()=>setSalesPeriod('weekly')}>Weekly Sales</button>
+          </div>
+          <div className="seg" role="group" aria-label="Group sales by">
+            <button data-testid="sales-territory" aria-pressed={salesGrouping==='territory'} onClick={()=>setSalesGrouping('territory')}>By Territory</button>
+            <button data-testid="sales-region" aria-pressed={salesGrouping==='region'} onClick={()=>setSalesGrouping('region')}>By Region</button>
+          </div>
+          <button className="btn" onClick={exportHistory}><Icon name="download" size={16}/>Export CSV</button>
+        </div>
+        {salesPeriod === 'daily' && <div className="sales-week-picker" role="group" aria-label="Select daily sales week">
+          {WEEK_GROUPS.map((w,i)=><button key={w.label} data-testid={`sales-week-${i+1}`} aria-pressed={salesWeek===i} onClick={()=>setSalesWeek(i)}>{w.label}<small>{w.start+1}–{w.end+1} Oct</small></button>)}
+          <button data-testid="sales-week-all" aria-pressed={salesWeek===-1} onClick={()=>setSalesWeek(-1)}>All Days<small>1–26 Oct</small></button>
+        </div>}
+        <p className="muted small">Historical values were transcribed from the supplied image and should be checked against the original workbook. Importing a new monthly report does not update this historical table.</p>
+      </section>
+      <div className="sales-summary">
+        <div className="panel"><small>Field sales · 1–26 Oct</small><h2>{fmt(total)}</h2></div>
+        <div className="panel"><small>Daily average</small><h2>{fmt(avg)}</h2></div>
+        <div className="panel"><small>Best field-sales day</small><h2>{fmt(best)}</h2></div>
+        <div className="panel"><small>Week 4 (22–26 Oct)</small><h2>{fmt(weeklyTotals[3])}</h2></div>
+      </div>
+      <section className="panel">
+        <div className="panel-head"><div><h2>{salesPeriod === 'daily' ? 'Daily performance' : 'Weekly performance'} · {salesGrouping === 'region' ? 'Regions' : 'Territories'}</h2><p>RR is the daily run rate; weekly target = RR × days in that week</p></div></div>
+        <div className="table-wrap sales-history-scroll sales-daily-table"><table className="sales-history-table">
+          <thead><tr><th className="sales-sticky">{salesGrouping === 'region' ? 'Region' : 'Territory'}</th><th className="num">RR</th>{columns.map(c=><th key={c.label} className="num">{c.label}</th>)}<th className="num">Total</th></tr></thead>
+          <tbody>{records.map(r=><tr key={r.name} role="button" tabIndex={0} aria-label={`Open ${r.name} sales performance`} onClick={()=>setSelectedSales({name:r.name, grouping:salesGrouping})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelectedSales({name:r.name,grouping:salesGrouping})}}} className="sales-select-row"><td className="sales-sticky"><strong>{r.name}</strong>{r.sub && <small className="sales-sub">{r.sub}</small>}</td><td className="num" data-day="Daily RR">{r.target}</td>{columns.map(c=>{const n=sumSales(r.values.slice(c.start,c.end+1));const goal=r.target*(c.end-c.start+1);return <td key={c.label} data-day={c.label} className={`num ${n>=goal?'sales-hit':''}`} title={`Target ${goal} · ${goal?Math.round(n/goal*100):0}%`}>{fmt(n)}</td>})}<td className="num strong" data-day="Month total">{fmt(sumSales(r.values))}</td></tr>)}</tbody>
+          <tfoot><tr><td className="sales-sticky"><strong>Field total</strong></td><td className="num">{sumSales(records.map(r=>r.target))}</td>{columns.map(c=><td className="num" key={c.label}>{fmt(sumSales(records.flatMap(r=>r.values.slice(c.start,c.end+1))))}</td>)}<td className="num">{fmt(sumSales(records.flatMap(r=>r.values)))}</td></tr></tfoot>
+        </table></div>
+      </section>
+      {selectedSales && selectedSales.grouping === salesGrouping && (() => {
+        const r = records.find(row=>row.name===selectedSales.name);
+        if (!r) return null;
+        const days = r.values;
+        const rr = Number(r.target)||0;
+        const actual = sumSales(days);
+        const goal = rr * days.length;
+        const pct = goal ? Math.round(actual/goal*100) : null;
+        const delta = actual-goal;
+        const activeWeeks = WEEK_GROUPS.map(w=>({
+          ...w, actual:sumSales(days.slice(w.start,w.end+1)),
+          target:rr*(w.end-w.start+1)
+        }));
+        const bestIndex = days.indexOf(Math.max(...days));
+        const last7 = sumSales(days.slice(-7));
+        const prior7 = sumSales(days.slice(-14,-7));
+        const change = prior7 ? Math.round((last7-prior7)/prior7*100) : null;
+        const hitDays = days.filter(v=>v>=rr).length;
+        return <section className="panel sales-drilldown" data-testid="sales-drilldown" aria-label={`${r.name} performance details`}>
+          <div className="panel-head">
+            <div><span className="eyebrow">{salesGrouping==='region'?'Regional':'Territory'} performance · October 2026</span><h2>{r.name}</h2><p>{r.sub||'Regional aggregate'} · Historical snapshot through 26 October</p></div>
+            <button className="btn" onClick={()=>setSelectedSales(null)} aria-label="Close sales details">Close details ×</button>
+          </div>
+          <div className="sales-detail-kpis">
+            <div><small>Sales · 1–26 Oct</small><strong>{fmt(actual)}</strong></div>
+            <div><small>Target · RR × 26 days</small><strong>{fmt(goal)}</strong></div>
+            <div><small>Achievement</small><strong>{pct===null?'N/A':pct+'%'}</strong></div>
+            <div><small>Variance to target</small><strong className={delta>=0?'pos':'neg'}>{delta>0?'+':''}{fmt(delta)}</strong></div>
+          </div>
+          <div className="sales-detail-columns">
+            <div>
+              <h3>Daily sales trend</h3>
+              <p className="muted small">Daily sales compared with RR target of {fmt(rr)}. Select Daily Sales above for week filters.</p>
+              <div className="sales-trend" role="img" aria-label={`Daily sales trend for ${r.name}; horizontal target line represents ${rr} sales per day`}>
+                {days.map((n,i)=><div className="sales-trend-col" key={i} title={`${i+1} Oct: ${n} sales; target ${rr}`}>
+                  <div className="sales-trend-bar" style={{height:`${Math.max(3,Math.round(n/Math.max(rr,...days,1)*100))}%`,background:n>=rr?'var(--good)':'var(--accent)'}}/>
+                  <small>{i+1}</small>
+                </div>)}
+              </div>
+              <h3>Weekly performance vs target</h3>
+              <div className="sales-week-detail">{activeWeeks.map(w=>{
+                const achievement=w.target?Math.round(w.actual/w.target*100):null;
+                return <div className="sales-week-detail-row" key={w.label}>
+                  <div><strong>{w.label}</strong><small>{w.start+1}–{w.end+1} Oct</small></div>
+                  <div className="sales-week-track"><span style={{width:`${Math.min(100,achievement||0)}%`,background:w.actual>=w.target?'var(--good)':'var(--accent)'}}/></div>
+                  <b>{fmt(w.actual)} / {fmt(w.target)}</b>
+                  <small>{achievement===null?'N/A':achievement+'%'}</small>
+                </div>
+              })}</div>
+            </div>
+            <div className="sales-insights">
+              <h3>Performance insights</h3>
+              <div><small>Days meeting RR</small><strong>{hitDays} of {days.length}</strong></div>
+              <div><small>Best day</small><strong>{bestIndex+1} Oct · {fmt(days[bestIndex])} sales</strong></div>
+              <div><small>Last 7 days vs previous 7</small><strong>{change===null?'N/A':`${change>0?'+':''}${change}%`}</strong></div>
+              <div><small>Daily average</small><strong>{fmt(Math.round(actual/days.length))}</strong></div>
+              <p className="muted small">{pct===null?'No RR target is available.':pct>=100?'Sales are meeting the cumulative RR target.':'Sales are below the cumulative RR target.'} {change===null?'':change>0?'The latest seven days show positive momentum.':change<0?'The latest seven days have slowed compared with the previous seven.':'The last two seven-day periods are level.'}</p>
+              <p className="muted small">Target comparisons use the current snapshot RR multiplied by the number of days, not an independently verified historical target. Data is transcribed from the screenshot.</p>
+            </div>
+          </div>
+        </section>;
+      })()}
+      <section className="panel"><div className="panel-head"><div><h2>Telesales · separate</h2><p>Not included in territory or regional totals</p></div></div><div className="table-wrap sales-history-scroll sales-daily-table"><table className="sales-history-table"><thead><tr><th className="sales-sticky">Channel</th>{columns.map(c=><th className="num" key={c.label}>{c.label}</th>)}<th className="num">Total</th></tr></thead><tbody><tr><td className="sales-sticky">Telesales</td>{columns.map(c=><td className="num" data-day={c.label} key={c.label}>{sumSales(REGION_DAILY.Telesales.slice(c.start,c.end+1))}</td>)}<td className="num" data-day="Month total">{sumSales(REGION_DAILY.Telesales)}</td></tr></tbody></table></div></section>
+    </>;
+  };
+
   const reports = () => {
     const calc = companyAgg;
     const tie = tieOut
@@ -562,7 +689,7 @@ export default function App() {
     </>
   );
 
-  const views = { overview, regions, territories, team, telesales, reports, settings: settingsView };
+  const views = { overview, regions, territories, team, telesales, 'daily-weekly': dailyWeekly, reports, settings: settingsView };
 
   return (
     <div className={`app ${collapsed ? 'is-collapsed' : ''}`} data-density={settings.density}>
@@ -638,7 +765,7 @@ export default function App() {
           {loading ? <PageSkeleton page={page} /> : <div className="page" key={`${page}-${tick}-${dataset.importedAt}`}>{views[page]()}</div>}
 
           <footer className="foot">
-            <span>© 2026 SalesPulse</span>
+            <span>Â© 2026 SalesPulse</span>
             <span>{reportLabel} · {daysLeft} days remaining</span>
           </footer>
         </main>
