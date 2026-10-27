@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { parseWorkbook } from './excel.js';
 import { Icon } from './components.jsx';
 import { fmt, signedGap } from './utils.js';
 
@@ -18,6 +17,9 @@ export default function ImportPanel({ dataset, onApply, onRestore }) {
     setFileName(file.name);
     try {
       const buffer = await file.arrayBuffer();
+      // Load the Excel parser only when a user imports a workbook.
+      // This keeps SheetJS out of the initial dashboard JavaScript bundle.
+      const { parseWorkbook } = await import('./excel.js');
       const res = parseWorkbook(buffer, dataset);
       if (res.ok) res.dataset.fileName = file.name;
       setResult(res);

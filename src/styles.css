@@ -479,15 +479,10 @@ details.tie td, details.tie th { padding: 8px 10px; border-bottom: 1px solid var
   .sections { grid-template-columns: 1fr; }
 }
 
-/* SalesPulse responsive navigation visibility fix */
+/* Keep the mobile menu button hidden at desktop widths. */
 @media (min-width: 861px) {
-  .menu-btn.icon-btn[data-testid="nav-toggle-mobile"] {
-    display: none;
-  }
+  .menu-btn.icon-btn[data-testid="nav-toggle-mobile"] { display: none; }
 }
-
 @media (max-width: 860px) {
-  .menu-btn.icon-btn[data-testid="nav-toggle-mobile"] {
-    display: grid;
-  }
+  .menu-btn.icon-btn[data-testid="nav-toggle-mobile"] { display: grid; }
 }
