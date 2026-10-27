@@ -1,0 +1,23 @@
+{
+  "name": "salespulse-dashboard",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test:import": "node scripts/verify-import.mjs",
+    "test:nav": "node scripts/test-nav.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "playwright": "^1.47.2",
+    "vite": "^5.4.11"
+  }
+}
